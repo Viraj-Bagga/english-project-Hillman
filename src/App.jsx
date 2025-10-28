@@ -103,7 +103,7 @@ export default function App() {
     <div className="snapper">
       <Hero onExplore={handleExplore} />
       <Article />
-      <ProgressDots active={activeIdx} total={5} />
+      <ProgressDots active={activeIdx} total={4} />
     </div>
   )
 }
