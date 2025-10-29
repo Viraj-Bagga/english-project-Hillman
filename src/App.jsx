@@ -13,6 +13,7 @@ export default function App() {
 
   const articleRef = useRef(null)
   const snappingRef = useRef(false)
+  const touchingRef = useRef(false)
 
   useEffect(() => {
     const cleanupFade = initFadeInOnScroll()
@@ -45,12 +46,29 @@ export default function App() {
     return () => io.disconnect()
   }, [])
 
-  // Enforce snap on scroll end (belt-and-suspenders)
+  // Track touch state so we don't snap while the user is dragging
+  useEffect(() => {
+    const onTS = () => { touchingRef.current = true }
+    const onTE = () => { touchingRef.current = false }
+    window.addEventListener('touchstart', onTS, { passive: true })
+    window.addEventListener('touchend', onTE, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onTS)
+      window.removeEventListener('touchend', onTE)
+    }
+  }, [])
+
+  // JS snap enforcement (CSS snapping disabled) — smoothScrollTo with debounce and touch-awareness
   useEffect(() => {
     let timer = null
-    const sections = () => Array.from(document.querySelectorAll('.article__section'))
+    const sections = () => {
+      const hero = document.querySelector('.hero')
+      const paras = Array.from(document.querySelectorAll('.article__section'))
+      return [hero, ...paras].filter(Boolean)
+    }
     const onScroll = () => {
       if (snappingRef.current) return
+      if (touchingRef.current) return // don't decide while finger is down
       clearTimeout(timer)
       timer = setTimeout(() => {
         const list = sections()
@@ -64,11 +82,10 @@ export default function App() {
         }
         if (best.el) {
           snappingRef.current = true
-          best.el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          // release lock after animation
-          setTimeout(() => { snappingRef.current = false }, 450)
+          smoothScrollTo(best.el, { duration: 900 })
+          setTimeout(() => { snappingRef.current = false }, 950)
         }
-      }, 120)
+      }, 200)
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => {
@@ -78,8 +95,9 @@ export default function App() {
   }, [])
 
   const handleExplore = () => {
-    if (articleRef.current) {
-      smoothScrollTo(articleRef.current, { duration: 700 })
+    const firstSection = document.querySelector('.article__section')
+    if (firstSection) {
+      smoothScrollTo(firstSection, { duration: 700 })
     }
   }
 
